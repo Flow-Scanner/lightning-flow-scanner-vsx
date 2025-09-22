@@ -13,49 +13,50 @@ import { ConfigProvider } from '../providers/config-provider';
 const { USE_NEW_CONFIG: isUseNewConfig } = process.env;
 
 export default class Commands {
-  constructor(private context: vscode.ExtensionContext) {}
+  constructor(private context: vscode.ExtensionContext) { }
 
   get handlers() {
-  const rawHandlers: Record<string, (...args: any[]) => any> = {
-    'lightningflowscanner.viewDefaulFlowRules': () => this.viewDefaulFlowRules(),
-    'lightningflowscanner.configRules': () => this.configRules(),
-    'lightningflowscanner.debugView': () => this.debugView(),
-    'lightningflowscanner.scanFlows': () => this.scanFlows(),
-    'lightningflowscanner.fixFlows': () => this.fixFlows(),
-    'lightningflowscanner.calculateFlowTestCoverage': () => this.calculateFlowTestCoverage(),
-  };
+    const rawHandlers: Record<string, (...args: any[]) => any> = {
+      'lightningflowscanner.viewDefaulFlowRules': () => this.viewDefaulFlowRules(),
+      'lightningflowscanner.configRules': () => this.configRules(),
+      'lightningflowscanner.debugView': () => this.debugView(),
+      'lightningflowscanner.scanFlows': () => this.scanFlows(),
+      'lightningflowscanner.fixFlows': () => this.fixFlows(),
+      'lightningflowscanner.calculateFlowTestCoverage': () => this.calculateFlowTestCoverage(),
+    };
 
-  return Object.entries(rawHandlers).map(([command, handler]) => {
-    return [
-      command,
-      async (...args: any[]): Promise<any> => {
-        this.checkExtensionAutoUpdate();   // nag before running command
-        return handler(...args);
-      }
-    ] as const;
-  });
-}
+    return Object.entries(rawHandlers).map(([command, handler]) => {
+      return [
+        command,
+        async (...args: any[]): Promise<any> => {
+          this.checkExtensionAutoUpdate();   // nag before running command
+          return handler(...args);
+        }
+      ] as const;
+    });
+  }
 
-private async checkExtensionAutoUpdate() {
-  const autoUpdate = vscode.workspace
-    .getConfiguration(undefined, null) // null = global scope
-    .get<boolean>("extensions.autoUpdate", true);
+  private async checkExtensionAutoUpdate() {
+    const autoUpdate = vscode.workspace
+      .getConfiguration(undefined, null)
+      .get<string | boolean>("extensions.autoUpdate", true);
 
-  if (autoUpdate) {
-    const selection = await vscode.window.showWarningMessage(
-      "⚠️ Extension auto-update is enabled. Please disable it.",
-      "Open Settings",
-      "Ignore"
-    );
-
-    if (selection === "Open Settings") {
-      vscode.commands.executeCommand(
-        "workbench.action.openSettings",
-        "extensions.autoUpdate"
+    // Treat "onlyEnabledExtensions" and false as OK; warn only if true
+    if (autoUpdate === true) {
+      const selection = await vscode.window.showWarningMessage(
+        "⚠️ Extension auto-update for *all* extensions is enabled. Please disable or restrict it.",
+        "Open Settings",
+        "Ignore"
       );
+
+      if (selection === "Open Settings") {
+        vscode.commands.executeCommand(
+          "workbench.action.openSettings",
+          "extensions.autoUpdate"
+        );
+      }
     }
   }
-}
 
   private viewDefaulFlowRules() {
     RuleOverview.createOrShow(this.context.extensionUri);

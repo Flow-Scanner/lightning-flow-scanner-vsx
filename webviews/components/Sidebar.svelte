@@ -26,30 +26,11 @@
         });
     }
 
-    function configRules() {
-      tsvscode.postMessage({
-            type: "configRules"
-        });
-    }
-
   </script>
   <TailwindWrapper>
     <div class="sb">
     <Banner/>
-    <section class="mt-4 p-4 bg-yellow-100 border-l-4 border-yellow-500 rounded">
-      <div class="bg-red-50 border-l-4 border-red-500 p-2 rounded mb-3">
-        <p class="text-sm font-bold text-red-700 mb-0">
-          Avoid unofficial extensions and disable auto-updates immediately(none).
-        </p>
-      </div>
-      <p class="ml-5 mb-2 text-sm text-gray-800">
-        Extensions run with the same privileges as you. If compromised, they could access CLI tokens or secret keys, and read or modify code while Code Builder is in use.
-      </p>
-    </section>
       <nav aria-label="Sidebar">
-        <button class="btn btn-blue" on:click={configRules}>
-          Configure Rules
-        </button>
         <button class="btn btn-blue" on:click={scanFlows}>
           Scan Flows
         </button>

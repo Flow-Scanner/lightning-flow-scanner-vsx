@@ -1,8 +1,8 @@
-  <a href="https://github.com/Lightning-Flow-Scanner">
+  <a href="https://github.com/SF-Flow-Scanner">
 <div class="banner">
 
     <img
-      src="https://github.com/Lightning-Flow-Scanner/.github/raw/main/docs/images/banner.png"
+      src="https://github.com/SF-Flow-Scanner/.github/raw/main/docs/images/banner.png"
       alt="Lightning Flow Scanner banner"
     />
 </div>
