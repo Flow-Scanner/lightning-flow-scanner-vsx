@@ -47,7 +47,7 @@
         <div class="banner">
             <a href="https://github.com/Lightning-Flow-Scanner">
                 <img
-                    src="https://github.com/Lightning-Flow-Scanner/.github/raw/main/docs/images/bannerslim.png"
+                    src="https://raw.githubusercontent.com/Flow-Scanner/lightning-flow-scanner-ce/master/media/bannerslim.png"
                     alt="Lightning Flow Scanner banner"
                 />
             </a>
