@@ -18,8 +18,8 @@ export default class MessageService {
     vscode.window.showErrorMessage(query.value);
   }
 
-  viewRules(query: any) {
-    vscode.commands.executeCommand('lightningflowscanner.viewDefaulFlowRules');
+  openDocumentation(query: any) {
+    vscode.commands.executeCommand('lightningflowscanner.openDocumentation');
   }
 
   scanFlows(query: any) {
