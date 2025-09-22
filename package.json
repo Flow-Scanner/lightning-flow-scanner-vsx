@@ -1,6 +1,6 @@
 {
-  "name": "lightningflowscanner",
-  "displayName": "Lightning Flow Scanner",
+  "name": "lightning-flow-scanner-vsx",
+  "displayName": "Lightning Flow Scanner CE",
   "publisher": "ForceConfigControl",
   "license": "AGPL-3.0",
   "repository": {
@@ -8,8 +8,8 @@
     "url": "https://github.com/Lightning-Flow-Scanner/lightning-flow-scanner-vsce"
   },
   "icon": "media/lightningflow.png",
-  "description": "A VSCode Extension designed to pinpoint deviations from Industry Best Practices in Salesforce Flows, ensuring standards of business automation excellence.",
-  "version": "5.0.1",
+  "description":" A VSCode Extension designed to proactively enforce secure and maintainable Salesforce Flows. It detects unsafe running contexts, hardcoded IDs and URLs, overly broad field access, unhandled nulls, and inefficient database operations, helping teams ensure their automations are safe, compliant, and reliable.",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.99.1"
   },

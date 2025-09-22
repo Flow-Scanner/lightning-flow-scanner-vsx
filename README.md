@@ -2,8 +2,6 @@
 
 [![Flow Overview](media/demo.gif)](https://github.com/Lightning-Flow-Scanner)
 
-## [🚨 Deprecation Notice — August, 2025](https://github.com/Lightning-Flow-Scanner)
-
 ## Features/Commands
 
 Use our side bar or the **Command Palette** and type `Flow` to see the list of all available commands.
@@ -21,8 +19,8 @@ The `Calculate Flow Coverage` command calculates Flow Test coverage percentages 
 
 <!-- commands -->
 
-| Command                                          | Title                   |
-| ------------------------------------------------ | ----------------------- |
+| Command                                            | Title                   |
+| -------------------------------------------------- | ----------------------- |
 | `lightningflowscanner.viewDefaultFlowRules`      | Default Flow Rules      |
 | `lightningflowscanner.scanFlows`                 | Scan Flows              |
 | `lightningflowscanner.debugView`                 | Debug Flow Scanner View |
@@ -34,8 +32,8 @@ The `Calculate Flow Coverage` command calculates Flow Test coverage percentages 
 
 <!-- configs -->
 
-| Key                                     | Description                                                                       | Type      | Default                       |
-| --------------------------------------- | --------------------------------------------------------------------------------- | --------- | ----------------------------- |
+| Key                                       | Description                                                                       | Type        | Default                         |
+| ----------------------------------------- | --------------------------------------------------------------------------------- | ----------- | ------------------------------- |
 | `lightningFlowScanner.SpecifyFiles`     | Specify flow file paths instead of a root directory.                              | `boolean` | `false`                       |
 | `lightningFlowScanner.NamingConvention` | Specify a REGEX expression to use as Flow Naming convention.                      | `string`  | `"[A-Za-z0-9]+_[A-Za-z0-9]+"` |
 | `lightningFlowScanner.APIVersion`       | Specify an expression to validate the API version, i.e. '===50'(use at least 50). | `string`  | `">50"`                       |
