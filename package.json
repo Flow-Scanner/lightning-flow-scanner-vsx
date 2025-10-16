@@ -37,11 +37,6 @@
           "type": "string",
           "default": ">50",
           "description": "Specify an expression to validate the API version, i.e. '===50'(use at least 50)."
-        },
-        "lightningFlowScanner.Reset": {
-          "type": "boolean",
-          "default": false,
-          "description": "Reset all configurations on every scan"
         }
       }
     },
@@ -195,6 +190,7 @@
     "flow scanner",
     "salesforce flow",
     "best practices",
-    "code quality"
+    "code quality",
+    "salesforce automation"
   ]
 }
