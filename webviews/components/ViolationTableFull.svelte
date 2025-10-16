@@ -52,6 +52,12 @@
                     minWidth: 150,
                 },
                 {
+                    title: "Severity",
+                    field: "severity",
+                    formatter: "textarea",
+                    minWidth: 150,
+                },
+                {
                     title: "Type",
                     field: "type",
                     formatter: "plaintext",
@@ -62,12 +68,6 @@
                     field: "flowName",
                     formatter: "textarea",
                     minWidth: 150,
-                },
-                {
-                    title: "DataType",
-                    field: "dataType",
-                    width: 150,
-                    formatter: "textarea"
                 },
                 {
                     title: "X coordinates",
@@ -91,6 +91,12 @@
                     formatter: "textarea",
                     minWidth: 150,
                 },
+                {
+                    title: "DataType",
+                    field: "dataType",
+                    width: 150,
+                    formatter: "textarea"
+                }
             ],
         });
     });
