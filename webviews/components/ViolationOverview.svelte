@@ -20,6 +20,7 @@
                     let ruleDescription = ruleResult.ruleDefinition.description;
                     let ruleLabel = ruleResult.ruleDefinition.label;
                     let flowName = scanResult.flow.name;
+                    let severity = ruleResult.severity ?? "warning";
                     let type;
                     let metaType;
                     let name;
@@ -33,6 +34,7 @@
                         ruleDescription,
                         ruleLabel,
                         flowName,
+                        severity
                     };
                     if (ruleResult.occurs) {
                         for (let detail of ruleResult.details) {
