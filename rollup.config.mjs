@@ -34,12 +34,6 @@ export default fs
                 file: "out/compiled/" + name + ".js",
                 assetFileNames: name + '.css',
             },
-            onwarn: function (message) {
-                if (message.code !== 'EVAL'){
-                    console.log(JSON.stringify(message));
-                    throw new Error(message);
-                } 
-            },
             plugins: [
                 svelte({
                     compilerOptions: {
