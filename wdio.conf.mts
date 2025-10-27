@@ -1,4 +1,13 @@
-import type { Options } from '@wdio/types'
+import type {Options} from '@wdio/types';
+import 'wdio-vscode-service';
+import {fileURLToPath} from 'url';
+import {dirname} from 'path';
+import {homedir} from 'os';
+import * as path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 export const config: Options.Testrunner = {
     //
     // ====================
@@ -10,10 +19,16 @@ export const config: Options.Testrunner = {
         autoCompile: true,
         tsNodeOpts: {
             project: './test/tsconfig.json',
-            transpileOnly: true
-        }
+            transpileOnly: true,
+        },
     },
-    
+
+
+    // If you run your tests on Sauce Labs you can specify the region you want to run your tests
+    // in via the `region` property. Available short handles for regions are `us` (default), `eu` and `apac`.
+    // These regions are used for the Sauce Labs VM cloud and the Sauce Labs Real Device Cloud.
+    // If you don't provide the region it will default for the `us`
+
     //
     // ==================
     // Specify Test Files
@@ -29,9 +44,7 @@ export const config: Options.Testrunner = {
     // The path of the spec files will be resolved relative from the directory of
     // of the config file unless it's absolute.
     //
-    specs: [
-        './test/specs/**/*.ts'
-    ],
+    specs: ['./test/specs/*.ts'],
     // Patterns to exclude.
     exclude: [
         // 'path/to/excluded/files'
@@ -52,24 +65,27 @@ export const config: Options.Testrunner = {
     // and 30 processes will get spawned. The property handles how many capabilities
     // from the same test should run tests.
     //
-    maxInstances: 10,
+    maxInstances: 1,
     //
     // If you have trouble getting all important capabilities together, check out the
     // Sauce Labs platform configurator - a great tool to configure your capabilities:
     // https://saucelabs.com/platform/platform-configurator
     //
-    capabilities: [{
-        browserName: 'vscode',
-        browserVersion: 'stable', // also possible: "insiders" or a specific version e.g. "1.80.0"
-        'wdio:vscodeOptions': {
-            // points to directory where extension package.json is located
-            extensionPath: __dirname,
-            // optional VS Code settings
-            userSettings: {
-                "editor.fontSize": 14
-            }
-        }
-    }],
+    capabilities: [
+        {
+            browserName: 'vscode',
+            browserVersion: 'stable',
+            'wdio:vscodeOptions': {
+                version: '1.92.0',
+                extensionPath: __dirname,
+                workspacePath: __dirname,
+                vscodeArgs: {
+                    profile: 'debug-profile',
+                },
+                storagePath: path.join(homedir(), '/.wdio-vscode-service/storage/'),
+            },
+        },
+    ],
 
     //
     // ===================
@@ -78,12 +94,13 @@ export const config: Options.Testrunner = {
     // Define all options that are relevant for the WebdriverIO instance here
     //
     // Level of logging verbosity: trace | debug | info | warn | error | silent
-    logLevel: 'info',
+    logLevel: process.env.COVERAGE ? 'warn' : 'info',
+
     //
     // Set specific log levels per logger
     // loggers:
     // - webdriver, webdriverio
-    // - @wdio/browserstack-service, @wdio/devtools-service, @wdio/sauce-service
+    // - @wdio/browserstack-service, @wdio/lighthouse-service, @wdio/sauce-service
     // - @wdio/mocha-framework, @wdio/jasmine-framework
     // - @wdio/local-runner
     // - @wdio/sumologic-reporter
@@ -127,7 +144,7 @@ export const config: Options.Testrunner = {
     // Make sure you have the wdio adapter package for the specific framework installed
     // before running any tests.
     framework: 'mocha',
-    
+
     //
     // The number of times to retry the entire specfile when it fails as a whole
     // specFileRetries: 1,
@@ -147,7 +164,7 @@ export const config: Options.Testrunner = {
     // See the full list at http://mochajs.org/
     mochaOpts: {
         ui: 'bdd',
-        timeout: 60000
+        timeout: 60000,
     },
 
     //
@@ -247,7 +264,6 @@ export const config: Options.Testrunner = {
     // afterTest: function(test, context, { error, result, duration, passed, retries }) {
     // },
 
-
     /**
      * Hook that gets executed after the suite has ended
      * @param {object} suite suite details
@@ -291,22 +307,22 @@ export const config: Options.Testrunner = {
     // onComplete: function(exitCode, config, capabilities, results) {
     // },
     /**
-    * Gets executed when a refresh happens.
-    * @param {string} oldSessionId session ID of the old session
-    * @param {string} newSessionId session ID of the new session
-    */
+     * Gets executed when a refresh happens.
+     * @param {string} oldSessionId session ID of the old session
+     * @param {string} newSessionId session ID of the new session
+     */
     // onReload: function(oldSessionId, newSessionId) {
     // }
     /**
-    * Hook that gets executed before a WebdriverIO assertion happens.
-    * @param {object} params information about the assertion to be executed
-    */
+     * Hook that gets executed before a WebdriverIO assertion happens.
+     * @param {object} params information about the assertion to be executed
+     */
     // beforeAssertion: function(params) {
     // }
     /**
-    * Hook that gets executed after a WebdriverIO assertion happened.
-    * @param {object} params information about the assertion that was executed, including its results
-    */
+     * Hook that gets executed after a WebdriverIO assertion happened.
+     * @param {object} params information about the assertion that was executed, including its results
+     */
     // afterAssertion: function(params) {
     // }
-}
+};

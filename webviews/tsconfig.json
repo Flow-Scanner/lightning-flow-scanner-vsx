@@ -1,5 +1,15 @@
 {
   "extends": "@tsconfig/svelte/tsconfig.json",
-  "include": ["./**/*"],
-  "compilerOptions": {"strict": false , "ignoreDeprecations":"5.0"}
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "target": "es2018",
+    "module": "esnext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "rootDir": ".",
+    "sourceMap": true
+  },
+  "exclude": ["node_modules", "dist", "out"]
 }

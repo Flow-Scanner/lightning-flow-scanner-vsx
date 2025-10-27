@@ -1,48 +1,64 @@
 //@ts-check
-
 'use strict';
-
 const path = require('path');
+const webpack = require('webpack');
+// eslint-disable-next-line n/no-unpublished-require
+const ESLintPlugin = require('eslint-webpack-plugin');
 
-//@ts-check
-/** @typedef {import('webpack').Configuration} WebpackConfig **/
-
-/** @type WebpackConfig */
-const extensionConfig = {
-  target: 'node', // VS Code extensions run in a Node.js-context 📖 -> https://webpack.js.org/configuration/node/
-	mode: 'none', // this leaves the source code as close as possible to the original (when packaging we set this to 'production')
-
-  entry: './src/extension.ts', // the entry point of this extension, 📖 -> https://webpack.js.org/configuration/entry-context/
+/** @typedef {import('webpack').Configuration} WebpackConfig */
+/**
+ * @param {Record<string, string>} env
+ * @param {Record<string, string>} argv
+ * @returns {WebpackConfig}
+ */
+const extensionConfig = (env, argv) => ({
+  target: 'node', // WDIO runs in Node.js context
+  mode: 'none', // Keep source close to original; set to 'production' for packaging
+  entry: './src/extension.ts', // Your entry point
   output: {
-    // the bundle is stored in the 'dist' folder (check package.json), 📖 -> https://webpack.js.org/configuration/output/
     path: path.resolve(__dirname, 'dist'),
     filename: 'extension.js',
-    libraryTarget: 'commonjs2'
+    libraryTarget: 'commonjs2',
   },
   externals: {
-    vscode: 'commonjs vscode' // the vscode-module is created on-the-fly and must be excluded. Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
-    // modules added here also need to be added in the .vscodeignore file
+    vscode: 'commonjs vscode', // Exclude vscode module
   },
   resolve: {
-    // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader
-    extensions: ['.ts', '.js']
+    extensions: ['.ts', '.js'], // Support TypeScript and JavaScript
   },
   module: {
     rules: [
       {
         test: /\.ts$/,
-        exclude: /node_modules/,
-        use: [
-          {
-            loader: 'ts-loader'
-          }
-        ]
-      }
-    ]
+        exclude: [/node_modules/, /wdio\.conf\.mts/], // Exclude WDIO config
+        use: env['coverage']
+          ? [
+              { loader: '@jsdevtools/coverage-istanbul-loader' }, // Add coverage for WDIO
+              { loader: 'ts-loader' },
+            ]
+          : [{ loader: 'ts-loader' }],
+      },
+    ],
   },
-  devtool: 'nosources-source-map',
+  plugins: [
+    new ESLintPlugin(), // Optional: Enforce code quality
+    new webpack.optimize.LimitChunkCountPlugin({
+      maxChunks: 1, // Ensure single bundle for extension
+    }),
+    new webpack.DefinePlugin({
+      'process.env.TESTING': JSON.stringify(env['wdio'] || false), // Flag for WDIO testing
+      'process.env.COVERAGE': JSON.stringify(env['coverage'] || false), // Flag for coverage
+    }),
+  ],
+  cache: {
+    type: 'filesystem', // Speed up rebuilds
+    name: argv.mode + '-wdio_' + env['wdio'] + '-coverage_' + env['coverage'],
+    version: '1',
+  },
+  devtool: 'nosources-source-map', // Same as original
   infrastructureLogging: {
-    level: "log", // enables logging required for problem matchers
+    level: 'log', // Same as original
   },
-};
-module.exports = [ extensionConfig ];
+});
+
+module.exports = [extensionConfig];
