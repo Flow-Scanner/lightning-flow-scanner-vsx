@@ -23,17 +23,17 @@
     "configuration": {
       "title": "Lightning Flow Scanner",
       "properties": {
-        "lightningFlowScanner.SpecifyFiles": {
+        "flowscanner.SpecifyFiles": {
           "type": "boolean",
           "default": false,
           "description": "Specify flow file paths instead of a root directory."
         },
-        "lightningFlowScanner.NamingConvention": {
+        "flowscanner.NamingConvention": {
           "type": "string",
           "default": "[A-Za-z0-9]+_[A-Za-z0-9]+",
           "description": "Specify a REGEX expression to use as Flow Naming convention."
         },
-        "lightningFlowScanner.APIVersion": {
+        "flowscanner.APIVersion": {
           "type": "string",
           "default": ">50",
           "description": "Specify an expression to validate the API version, i.e. '===50'(use at least 50)."
@@ -42,28 +42,28 @@
     },
     "commands": [
       {
-        "command": "lightningflowscanner.openDocumentation",
-        "title": "Open Flow Scanner Documentation"
+        "command": "flowscanner.openDocumentation",
+        "title": "Open LFS Documentation"
       },
       {
-        "command": "lightningflowscanner.scanFlows",
-        "title": "Scan Flows with Flow Scanner"
+        "command": "flowscanner.scanFlows",
+        "title": "Scan Flows"
       },
       {
-        "command": "lightningflowscanner.debugView",
-        "title": "Debug Flow Scanner View"
+        "command": "flowscanner.debugger",
+        "title": "Debug Flow Scanner"
       },
       {
-        "command": "lightningflowscanner.fixFlows",
-        "title": "Fix Flows with Flow Scanner"
+        "command": "flowscanner.fixFlows",
+        "title": "Fix Flows"
       },
       {
-        "command": "lightningflowscanner.calculateFlowTestCoverage",
-        "title": "Calculate Flow Coverage with Flow Scanner"
+        "command": "flowscanner.calculateFlowTestCoverage",
+        "title": "Calculate Flow Coverage"
       },
       {
-        "command": "lightningflowscanner.configRules",
-        "title": "Configurate Flow Rules"
+        "command": "flowscanner.configRules",
+        "title": "Configure Flow Rules"
       }
     ],
     "viewsContainers": {
@@ -103,8 +103,9 @@
     "package": "webpack --mode production --devtool hidden-source-map --config ./build/node-extension.webpack.config.js",
     "____MAIN____": "Developer Scripts",
     "build": "rollup -c",
+    "build:vsx": "rollup -c && vsce package",
     "watch": "concurrently \"rollup -c -w\" \"webpack --watch --config ./build/node-extension.webpack.config.js\"",
-    "test": "vsce package && npm run build:wdio && npm run wdio"
+    "test": "npm run build:wdio && npm run wdio"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.2",
