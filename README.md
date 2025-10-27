@@ -64,7 +64,7 @@ Use our side bar or the **Command Palette** and type `Flow Scanner` to see the l
 5. **Run End-to-End Tests**
 
 ```bash
-  npm run wdio-test
+  npm run test
 ```
 
 6. **Linking** **Core Module (Optional)**
