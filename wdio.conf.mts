@@ -27,10 +27,10 @@ export const config: Options.Testrunner = {
     capabilities: [
         {
             browserName: 'vscode',
-            browserVersion: 'stable',
+            browserVersion: 'stable', // also possible: "insiders" or a specific version e.g. "1.80.0"
             'wdio:vscodeOptions': {
                 version: '1.92.0',
-                extensionPath: path.resolve(__dirname, 'dist'),
+                extensionPath: __dirname,
                 workspacePath: __dirname,
                 vscodeArgs: {
                     profile: 'debug-profile',
@@ -39,7 +39,6 @@ export const config: Options.Testrunner = {
             },
         },
     ],
-
     logLevel: process.env.COVERAGE ? 'warn' : 'info',
 
     bail: 0,
