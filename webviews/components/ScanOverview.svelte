@@ -1,4 +1,4 @@
-<script lang="typescript">
+<script lang="ts">
     import { onMount } from "svelte";
     import ScanResultTable from "./ScanResultTable.svelte";
     import NavigationBanner from "./Navigation.svelte";
