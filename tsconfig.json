@@ -2,6 +2,7 @@
 	"compilerOptions": {
 		"module": "commonjs",
 		"target": "es6",
+    "moduleResolution": "node",
 		"resolveJsonModule": true,
 		"outDir": "out",
 		"lib": [
@@ -23,7 +24,7 @@
 		},
 		"types": [
             "node",
-						"@wdio/globals/types",
+			"@wdio/globals/types",
             "@wdio/mocha-framework",
             "wdio-vscode-service"
         ],
@@ -34,7 +35,7 @@
 		".vscode-test",
 		"webviews",
 		"test",
-		"wdio.conf.ts",
+		"wdio.conf.mts",
 		"tsup.config.ts",
 		"jest.config.ts",
 		"tests",

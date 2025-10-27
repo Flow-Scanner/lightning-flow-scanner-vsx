@@ -40,7 +40,7 @@ describe('LFS VSCE Side Bar Smoke Tests', () => {
   it('The Get Rules command results in opening the Flow Rules view', async () => {
     // Run the View Default Flow Rules via the Command Prompt
     const commandInput = await workbench.openCommandPrompt();
-    await workbench.executeCommand('lightningflowscanner.viewDefaultFlowRules');
+    await workbench.executeCommand('flowscanner.viewDefaultFlowRules');
     const editorView = workbench.getEditorView();
     const activeTab = await editorView.getActiveTab();
     const title = await activeTab?.getTitle();

@@ -15,7 +15,7 @@ export class CacheProvider {
       private context: ExtensionContext,
       defaultState?: DefaultState
   ) {
-      this.cacheName = 'lightningflowscanner';
+      this.cacheName = 'flowscanner';
       this.cache =
           this.context.globalState.get(this.cacheName, defaultState) ?? {};
   }
