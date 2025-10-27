@@ -59,20 +59,5 @@
         "${workspaceFolder}/out/test/**/*.js"
       ]
     },
-    {
-      "name": "ReactiveVSCE Run Extension",
-      "type": "extensionHost",
-      "request": "launch",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}"
-      ],
-      "outFiles": [
-        "${workspaceFolder}/dist/**/*.js"
-      ],
-      "env": {
-        "LFS_USE_REACTIVE_VSCE": "true"
-      },
-      "preLaunchTask": "npm: v:dev",
-    }
   ]
 }
