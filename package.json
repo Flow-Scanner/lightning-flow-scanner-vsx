@@ -102,9 +102,9 @@
     "wdio": "wdio run ./wdio.conf.mts > wdio.log",
     "package": "webpack --mode production --devtool hidden-source-map --config ./build/node-extension.webpack.config.js",
     "____MAIN____": "Developer Scripts",
-    "build": "rollup -c && webpack --config ./build/node-extension.webpack.config.js",
+    "build": "rollup -c",
     "watch": "concurrently \"rollup -c -w\" \"webpack --watch --config ./build/node-extension.webpack.config.js\"",
-    "test": "npm run build:wdio && npm run wdio"
+    "test": "vsce package && npm run build:wdio && npm run wdio"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.2",
@@ -189,7 +189,7 @@
     "salesforce automation"
   ],
   "volta": {
-    "node": "18.20.6"
+    "node": "20.19.5"
   },
   "env": {
     "NODE_ENV": "wdio"

@@ -30,7 +30,7 @@ export const config: Options.Testrunner = {
             browserVersion: 'stable',
             'wdio:vscodeOptions': {
                 version: '1.92.0',
-                extensionPath: __dirname,
+                extensionPath: path.resolve(__dirname, 'dist'),
                 workspacePath: __dirname,
                 vscodeArgs: {
                     profile: 'debug-profile',
