@@ -13,10 +13,10 @@
 
 Use our side bar or the **Command Palette** and type `flowscanner` to see the list of all available commands.
 
-* `Configure Flow Scanner` Allows to define rules and expressions as per defined in the [scanner documentation](https://github.com/Flow-Scanner/lightning-flow-scanner-core).
-* `Scan Flows` allows choosing either a directory or a selection of flows to run the analysis against.
-* `Fix Flows` will apply available fixes automatically.
-* `Flow Scanner Documentation` can be used to reference the documentation.
+* `Configure Flow Scanner` - Set up rules in `.flow-scanner.yml` (see [documentation](https://github.com/Flow-Scanner/lightning-flow-scanner-core))
+* `Scan Flows` - Analyze a directory or selected flow files
+* `Fix Flows` - Automatically apply available fixes
+* `Flow Scanner Documentation` - Open the rules reference guide
 
 **Privacy:** Zero user data collected. All processing is client-side.
 → See Data Handling in our [Security Policy](https://github.com/Flow-Scanner/lightning-flow-scanner-vsx?tab=security-ov-file).
