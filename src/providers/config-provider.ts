@@ -1,6 +1,5 @@
 // src/providers/config-loader.ts
 import { cosmiconfig } from 'cosmiconfig';
-import * as path from 'path';
 
 const moduleName = 'flow-scanner';
 

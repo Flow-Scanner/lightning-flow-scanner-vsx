@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import * as vscode from 'vscode';
 import { SelectFlows } from '../libs/SelectFlows';
 import { SaveFlow } from '../libs/SaveFlow';
@@ -144,38 +145,67 @@ export default class Commands {
     }
   }
 
-  private async scanFlows() {
-    const selectedUris = await this.selectFlows('Select flow files or folder to scan:');
-    if (!selectedUris) return;
+private async scanFlows() {
+  const selectedUris = await this.selectFlows('Select flow files or folder to scan:');
+  if (!selectedUris) return;
 
-    const root = vscode.workspace.workspaceFolders![0].uri;
-    ScanOverview.createOrShow(this.context.extensionUri, []);
+  const root = vscode.workspace.workspaceFolders![0].uri;
+  ScanOverview.createOrShow(this.context.extensionUri, []);
 
-    const configReset = vscode.workspace.getConfiguration('flowscanner').get<boolean>('Reset');
-    if (configReset) await this.configRules();
+  const configReset = vscode.workspace.getConfiguration('flowscanner').get<boolean>('Reset');
+  if (configReset) await this.configRules();
 
-    const ruleConfig = await this.loadConfig(root.fsPath);
+  // --- FORCE OVERRIDE: MUST INCLUDE APIVersion TO KILL DEFAULT <49 ---
+  const ruleConfig = {
+    rules: {
+      APIVersion: {
+        severity: "error",
+        expression: ">55",  // THIS NOW WINS
+      },
+    },
+  };
 
-    if (Object.keys(ruleConfig).length === 0) {
-      const choice = await vscode.window.showWarningMessage(
-        'No rules configured. Run "Configure Rules" first?',
-        'Configure Now',
-        'Scan Anyway'
-      );
-      if (choice === 'Configure Now') {
-        await this.configRules();
-        return;
-      }
-    }
+  OutputChannel.getInstance().logChannel.debug('FORCED CONFIG (overrides core default):', ruleConfig);
 
-    OutputChannel.getInstance().logChannel.debug('Using rule config for scan:', ruleConfig);
+  const parsed = await core.parse(toFsPaths(selectedUris));
+  const results = core.scan(parsed, ruleConfig);
 
-    const parsed = await core.parse(toFsPaths(selectedUris));
-    const results = core.scan(parsed, ruleConfig);
+  await CacheProvider.instance.set('results', results);
+  ScanOverview.createOrShow(this.context.extensionUri, results);
+}
 
-    await CacheProvider.instance.set('results', results);
-    ScanOverview.createOrShow(this.context.extensionUri, results);
-  }
+  // private async scanFlows() {
+  //   const selectedUris = await this.selectFlows('Select flow files or folder to scan:');
+  //   if (!selectedUris) return;
+
+  //   const root = vscode.workspace.workspaceFolders![0].uri;
+  //   ScanOverview.createOrShow(this.context.extensionUri, []);
+
+  //   const configReset = vscode.workspace.getConfiguration('flowscanner').get<boolean>('Reset');
+  //   if (configReset) await this.configRules();
+
+  //   const ruleConfig = await this.loadConfig(root.fsPath);
+
+  //   if (Object.keys(ruleConfig).length === 0) {
+  //     const choice = await vscode.window.showWarningMessage(
+  //       'No rules configured. Run "Configure Rules" first?',
+  //       'Configure Now',
+  //       'Scan Anyway'
+  //     );
+  //     if (choice === 'Configure Now') {
+  //       await this.configRules();
+  //       return;
+  //     }
+  //   }
+
+  //   OutputChannel.getInstance().logChannel.debug('Using rule config for scan:', ruleConfig);
+
+  //   const parsed = await core.parse(toFsPaths(selectedUris));
+  //   const results = core.scan(parsed, ruleConfig);
+
+  //   await CacheProvider.instance.set('results', results);
+  //   ScanOverview.createOrShow(this.context.extensionUri, results);
+  // }
 
   private async fixFlows() {
     let results: core.ScanResult[] = CacheProvider.instance.get('results') || [];
