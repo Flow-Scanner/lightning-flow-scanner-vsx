@@ -81,29 +81,48 @@ private async configRules() {
     vscode.window.showErrorMessage('No workspace folder found.');
     return;
   }
-
   const workspacePath = ws.uri.fsPath;
+  const configPath = path.join(workspacePath, '.flow-scanner.yml');
+  
+  // Check if config file exists and offer to open it
+  try {
+    await vscode.workspace.fs.stat(vscode.Uri.file(configPath));
+    // File exists - ask user what they want to do
+    const choice = await vscode.window.showQuickPick(
+      ['Open Config File', 'Reconfigure Rules'],
+      { 
+        placeHolder: 'Configuration file exists. What would you like to do?'
+      }
+    );
+    
+    if (choice === undefined) return;
+    
+    if (choice === 'Open Config File') {
+      const doc = await vscode.workspace.openTextDocument(configPath);
+      await vscode.window.showTextDocument(doc);
+      return;
+    }
+    // Otherwise continue with reconfiguration
+  } catch {
+    // File doesn't exist, continue with normal flow
+  }
+  
   let rules: RuleConfig = await this.loadConfig(workspacePath);
-
   const allRules = [...core.getRules()];
   const currentNames = Object.keys(rules);
   
   // Preselect all rules if no config exists
   const isEmptyConfig = currentNames.length === 0;
-
   const items = allRules.map(rule => ({
     label: rule.label,
     description: rule.name,
     picked: isEmptyConfig ? true : currentNames.includes(rule.name),
   }));
-
   const selected = await vscode.window.showQuickPick(items, {
     canPickMany: true,
     placeHolder: 'Select rules to enable/disable',
   });
-
   if (selected === undefined) return;
-
   const newRules: RuleConfig = {};
   for (const item of selected) {
     const def = allRules.find(r => r.name === item.description)!;
@@ -113,9 +132,7 @@ private async configRules() {
       expression: existing?.expression,
     };
   }
-
   let changed = false;
-
   if (newRules.FlowName) {
     const current = newRules.FlowName.expression || '';
     const expr = await vscode.window.showInputBox({
@@ -128,7 +145,6 @@ private async configRules() {
       changed = true;
     }
   }
-
   if (newRules.APIVersion) {
     const current = newRules.APIVersion.expression || '';
     const expr = await vscode.window.showInputBox({
@@ -141,9 +157,18 @@ private async configRules() {
       changed = true;
     }
   }
-
   if (changed || Object.keys(newRules).length !== currentNames.length) {
     await this.saveConfig(workspacePath, newRules);
+    
+    // After saving, offer to open the file
+    const openFile = await vscode.window.showInformationMessage(
+      'Configuration saved successfully!',
+      'Open Config File'
+    );
+    if (openFile) {
+      const doc = await vscode.workspace.openTextDocument(configPath);
+      await vscode.window.showTextDocument(doc);
+    }
   }
 }
 
