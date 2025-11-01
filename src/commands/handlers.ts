@@ -3,18 +3,15 @@ import { SelectFlows } from '../libs/SelectFlows';
 import { SaveFlow } from '../libs/SaveFlow';
 import { ScanOverview } from '../panels/ScanOverviewPanel';
 import * as core from 'lightning-flow-scanner-core';
-import { findFlowCoverage } from '../libs/FindFlowCoverage';
 import { CacheProvider } from '../providers/cache-provider';
 import { OutputChannel } from '../providers/outputChannel';
 import { ConfigProvider } from '../providers/config-provider';
 import * as YAML from 'yaml';
 
-const { USE_NEW_CONFIG: isUseNewConfig } = process.env;
-
 export default class Commands {
   constructor(private context: vscode.ExtensionContext) { }
 
-  
+
   get handlers() {
     const rawHandlers: Record<string, (...args: any[]) => any> = {
       'flowscanner.openDocumentation': () => this.openDocumentation(),
@@ -38,12 +35,11 @@ export default class Commands {
     vscode.env.openExternal(url);
   }
 
-private async configRules() {
-  type RuleWithExpression = { severity: string; expression?: string };
-  type RuleConfig = Record<string, RuleWithExpression>;
+  private async configRules() {
+    type RuleWithExpression = { severity: string; expression?: string };
+    type RuleConfig = Record<string, RuleWithExpression>;
 
-  // If new YAML config flow is enabled
-  if (isUseNewConfig === 'true') {
+    // If new YAML config flow is enabled
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
       vscode.window.showErrorMessage('No workspace folder found.');
@@ -101,76 +97,6 @@ private async configRules() {
     }
   }
 
-  // ----- Legacy QuickPick flow -----
-  const allRules: core.IRuleDefinition[] = [...core.getRules()];
-  const ruleConfig: RuleConfig = {};
-
-  const items = allRules.map((rule) => ({
-    label: rule.label,
-    value: rule.name,
-    picked: true,
-  }));
-
-  const selectedRules = (await vscode.window.showQuickPick(items, {
-    canPickMany: true,
-  })) as { label: string; value: string }[];
-
-  if (!selectedRules) {
-    vscode.window.showInformationMessage('No rules selected.');
-    return;
-  }
-
-  for (const rule of allRules) {
-    if (selectedRules.map((r) => r.value).includes(rule.name)) {
-      ruleConfig[rule.name] = { severity: 'error' };
-    }
-  }
-
-  // Prompt for FlowName expression if selected
-  if (selectedRules.some((r) => r.value === 'FlowName')) {
-    const naming = await vscode.window.showInputBox({
-      prompt: 'Define a naming convention for Flow Names (REGEX format).',
-      placeHolder: '[A-Za-z0-9]+_[A-Za-z0-9]+',
-      value: '[A-Za-z0-9]+_[A-Za-z0-9]+',
-    });
-    if (naming) {
-      ruleConfig['FlowName'] = { severity: 'error', expression: naming };
-      await vscode.workspace
-        .getConfiguration()
-        .update('flowscanner.NamingConvention', naming, true);
-    }
-  }
-
-  // Prompt for APIVersion expression if selected
-  if (selectedRules.some((r) => r.value === 'APIVersion')) {
-    const apiVersion = await vscode.window.showInputBox({
-      prompt: 'Set an API Version rule (e.g. ">50" or ">=60").',
-      placeHolder: '>50',
-      value: '>50',
-    });
-    if (apiVersion) {
-      ruleConfig['APIVersion'] = { severity: 'error', expression: apiVersion };
-      await vscode.workspace
-        .getConfiguration()
-        .update('flowscanner.APIVersion', apiVersion, true);
-    }
-  }
-
-  // Store legacy rules in cache
-  await CacheProvider.instance.set('ruleconfig', ruleConfig);
-  OutputChannel.getInstance().logChannel.debug('Stored legacy rule config', ruleConfig);
-}
-
-  // debug view 
-  // private async debugView() {
-  //   let results = testdata as unknown as core.ScanResult[];
-  //   await CacheProvider.instance.set('results', results);
-  //   ScanOverview.createOrShow(this.context.extensionUri, results);
-  //   await vscode.commands.executeCommand(
-  //     'workbench.action.webview.openDeveloperTools'
-  //   );
-  // }
-
   private async scanFlows() {
     const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri;
     const selectedUris = await new SelectFlows(
@@ -204,11 +130,8 @@ private async configRules() {
         'load stored rule configurations',
         ruleConfig
       );
-      if (isUseNewConfig === 'true') {
-        // load and use config
-        const configProvider = new ConfigProvider();
-        ruleConfig = await configProvider.loadConfig(rootPath.fsPath);
-      }
+      const configProvider = new ConfigProvider();
+      ruleConfig = await configProvider.loadConfig(rootPath.fsPath);
       results = core.scan(await core.parse(selectedUris), ruleConfig);
       OutputChannel.getInstance().logChannel.debug('Scan Results', ...results);
       await CacheProvider.instance.set('results', results);
