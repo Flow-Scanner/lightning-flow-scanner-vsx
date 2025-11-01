@@ -37,7 +37,7 @@ jobs:
       - name: Setup Dependencies
         run: |
           npm ci
-          npm install -g @vscode/vsce ovsx
+          npm install -g @vscode/vsce
       - name: Compile VSIX
         run: npm run build
       - name: Publish VSCE Marketplace
