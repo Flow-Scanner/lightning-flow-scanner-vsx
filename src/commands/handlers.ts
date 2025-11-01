@@ -8,9 +8,11 @@ import { OutputChannel } from '../providers/outputChannel';
 import { ConfigProvider } from '../providers/config-provider';
 import * as YAML from 'yaml';
 
-export default class Commands {
-  constructor(private context: vscode.ExtensionContext) { }
+const toFsPaths = (uris: vscode.Uri[]): string[] => uris.map(u => u.fsPath);
+const toUris = (paths: string[]): vscode.Uri[] => paths.map(p => vscode.Uri.file(p));
 
+export default class Commands {
+  constructor(private context: vscode.ExtensionContext) {}
 
   get handlers() {
     const rawHandlers: Record<string, (...args: any[]) => any> = {
@@ -19,13 +21,12 @@ export default class Commands {
       'flowscanner.scanFlows': () => this.scanFlows(),
       'flowscanner.fixFlows': () => this.fixFlows(),
     };
-
     return Object.entries(rawHandlers).map(([command, handler]) => {
       return [
         command,
         async (...args: any[]): Promise<any> => {
           return handler(...args);
-        }
+        },
       ] as const;
     });
   }
@@ -38,25 +39,17 @@ export default class Commands {
   private async configRules() {
     type RuleWithExpression = { severity: string; expression?: string };
     type RuleConfig = Record<string, RuleWithExpression>;
-
-    // If new YAML config flow is enabled
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
       vscode.window.showErrorMessage('No workspace folder found.');
       return;
     }
-
     const workspacePath = workspaceFolders[0].uri.fsPath;
     const configProvider = new ConfigProvider();
-
     try {
       const configResult = await configProvider.discover(workspacePath);
-
-      // Type assertion for safe access
       const configTyped = configResult.config as { rules?: RuleConfig } | undefined;
       const rules: RuleConfig = configTyped?.rules ?? {};
-
-      // Prompt for missing expressions
       if (!rules.FlowName?.expression) {
         const naming = await vscode.window.showInputBox({
           prompt: 'Define a naming convention for Flow Names (REGEX format).',
@@ -65,7 +58,6 @@ export default class Commands {
         });
         if (naming) rules.FlowName = { severity: 'error', expression: naming };
       }
-
       if (!rules.APIVersion?.expression) {
         const apiVersion = await vscode.window.showInputBox({
           prompt: 'Set an API Version rule (e.g. ">50" or ">=60").',
@@ -74,19 +66,13 @@ export default class Commands {
         });
         if (apiVersion) rules.APIVersion = { severity: 'error', expression: apiVersion };
       }
-
-      // Persist updated YAML config using yaml.stringify
       const yamlString = YAML.stringify(configResult.config);
       await vscode.workspace.fs.writeFile(
         vscode.Uri.file(configResult.fspath),
         new TextEncoder().encode(yamlString)
       );
-
-      // Store rules in cache
       await CacheProvider.instance.set('ruleconfig', rules);
       OutputChannel.getInstance().logChannel.debug('Stored YAML rule config', rules);
-
-      // Open config file in editor
       const document = await vscode.workspace.openTextDocument(configResult.fspath);
       await vscode.window.showTextDocument(document);
       vscode.window.showInformationMessage(`Loaded configuration from ${configResult.fspath}`);
@@ -98,89 +84,86 @@ export default class Commands {
   }
 
   private async scanFlows() {
-    const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri;
-    const selectedUris = await new SelectFlows(
-      rootPath,
-      'Select a root folder:'
-    ).execute(rootPath);
-    OutputChannel.getInstance().logChannel.debug(
-      'Selected uris',
-      ...selectedUris
-    );
-    if (selectedUris.length > 0) {
-      let results: core.ScanResult[] = [];
-      const panel = ScanOverview.createOrShow(
-        this.context.extensionUri,
-        results
-      );
-      OutputChannel.getInstance().logChannel.trace('create panel');
-      let configReset: vscode.WorkspaceConfiguration =
-        vscode.workspace
-          .getConfiguration('flowscanner')
-          .get('Reset') ?? undefined;
-      OutputChannel.getInstance().logChannel.trace(
-        'load vscode stored configurations'
-      );
-      if (configReset) {
-        OutputChannel.getInstance().logChannel.trace('reset configurations');
-        await this.configRules();
-      }
-      let ruleConfig = CacheProvider.instance.get('ruleconfig');
-      OutputChannel.getInstance().logChannel.debug(
-        'load stored rule configurations',
-        ruleConfig
-      );
-      const configProvider = new ConfigProvider();
-      ruleConfig = await configProvider.loadConfig(rootPath.fsPath);
-      results = core.scan(await core.parse(selectedUris), ruleConfig);
-      OutputChannel.getInstance().logChannel.debug('Scan Results', ...results);
-      await CacheProvider.instance.set('results', results);
-      ScanOverview.createOrShow(this.context.extensionUri, results);
-    } else {
-      vscode.window.showInformationMessage('No flow files found.');
+    const selectedUris = await this.selectFlows('Select flow files or folder to scan:');
+    if (!selectedUris) return;
+    const rootPath = vscode.workspace.workspaceFolders![0].uri;
+    let results: core.ScanResult[] = [];
+    ScanOverview.createOrShow(this.context.extensionUri, results);
+    OutputChannel.getInstance().logChannel.trace('Created scan overview panel');
+    const configReset = vscode.workspace.getConfiguration('flowscanner').get<boolean>('Reset');
+    if (configReset) {
+      OutputChannel.getInstance().logChannel.trace('Resetting configurations');
+      await this.configRules();
     }
+    const configProvider = new ConfigProvider();
+    const ruleConfig = await configProvider.loadConfig(rootPath.fsPath);
+    OutputChannel.getInstance().logChannel.debug('Loaded rule config', ruleConfig);
+    const parsedFlows = await core.parse(toFsPaths(selectedUris));
+    results = core.scan(parsedFlows, ruleConfig);
+    OutputChannel.getInstance().logChannel.debug('Scan completed', results.length, 'results');
+    await CacheProvider.instance.set('results', results);
+    ScanOverview.createOrShow(this.context.extensionUri, results);
   }
 
   private async fixFlows() {
-    const storedResults = CacheProvider.instance.get('results');
-    OutputChannel.getInstance().logChannel.trace(
-      'has scan results?',
-      storedResults.length
-    );
-    if (storedResults && storedResults.length > 0) {
-      OutputChannel.getInstance().logChannel.debug(
-        'contains scan results',
-        ...storedResults
+    let results: core.ScanResult[] = CacheProvider.instance.get('results') || [];
+    if (results.length > 0) {
+      const useCached = await vscode.window.showQuickPick(
+        ['Use last scan results', 'Select different files to fix'],
+        { placeHolder: `Found ${results.length} scan result(s) from previous run` }
       );
-      ScanOverview.createOrShow(this.context.extensionUri, []);
-      const newResults: core.ScanResult[] = core.fix(storedResults);
-      OutputChannel.getInstance().logChannel.debug(
-        'invoked scanned results in total: ',
-        newResults.length
-      );
-      for (const newResult of newResults) {
-        OutputChannel.getInstance().logChannel.trace('Fixed File', newResult);
-        const uri = vscode.Uri.file(newResult.flow.fsPath);
-        await new SaveFlow().execute(newResult.flow, uri);
-      }
-      if (newResults && newResults.length > 0) {
-        OutputChannel.getInstance().logChannel.trace(
-          'Has fixed results, storing inside cache'
-        );
-        await CacheProvider.instance.set('results', newResults);
-        await ScanOverview.createOrShow(this.context.extensionUri, newResults);
-      } else {
-        OutputChannel.getInstance().logChannel.trace(
-          'Nothing fixed, showing warning message'
-        );
-        await ScanOverview.createOrShow(
-          this.context.extensionUri,
-          storedResults
-        );
-        await vscode.window.showWarningMessage(
-          'Fix Flows: UnusedVariable and UnconnectedElement rules are currently supported, stay tuned for more rules.'
-        );
+      if (useCached === 'Select different files to fix') {
+        results = [];
+      } else if (useCached === undefined) {
+        return;
       }
     }
+    if (results.length === 0) {
+      const selectedUris = await this.selectFlows('Select flow files to fix:');
+      if (!selectedUris) return;
+      const rootPath = vscode.workspace.workspaceFolders![0].uri;
+      const configProvider = new ConfigProvider();
+      const ruleConfig = await configProvider.loadConfig(rootPath.fsPath);
+      const parsedFlows = await core.parse(toFsPaths(selectedUris));
+      results = core.scan(parsedFlows, ruleConfig);
+      OutputChannel.getInstance().logChannel.debug('Re-scanned for fix', results.length);
+    }
+    if (results.length === 0) {
+      vscode.window.showInformationMessage('No issues to fix.');
+      ScanOverview.createOrShow(this.context.extensionUri, []);
+      return;
+    }
+    ScanOverview.createOrShow(this.context.extensionUri, results);
+    const newResults = core.fix(results);
+    OutputChannel.getInstance().logChannel.debug('Fix applied', newResults.length, 'updated');
+    for (const result of newResults) {
+      const uri = vscode.Uri.file(result.flow.fsPath);
+      await new SaveFlow().execute(result.flow, uri);
+      OutputChannel.getInstance().logChannel.trace('Fixed & saved', uri.fsPath);
+    }
+    await CacheProvider.instance.set('results', newResults);
+    if (newResults.length > 0) {
+      ScanOverview.createOrShow(this.context.extensionUri, newResults);
+    } else {
+      vscode.window.showWarningMessage(
+        'Fix Flows: Only UnusedVariable and UnconnectedElement rules are supported.'
+      );
+      ScanOverview.createOrShow(this.context.extensionUri, results);
+    }
+  }
+
+  private async selectFlows(prompt: string): Promise<vscode.Uri[] | undefined> {
+    const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri;
+    if (!rootPath) {
+      vscode.window.showErrorMessage('No workspace folder open.');
+      return undefined;
+    }
+    const selectedPaths = await new SelectFlows(rootPath, prompt).execute(rootPath);
+    OutputChannel.getInstance().logChannel.debug('Selected paths', ...selectedPaths);
+    if (selectedPaths.length === 0) {
+      vscode.window.showInformationMessage('No flow files selected.');
+      return undefined;
+    }
+    return toUris(selectedPaths);
   }
 }
