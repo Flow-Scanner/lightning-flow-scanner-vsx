@@ -162,6 +162,15 @@ private async scanFlows() {
         severity: "error",
         expression: ">55",  // THIS NOW WINS
       },
+      CopyAPIName: {
+        severity: "error",
+      },
+      MissingFaultPath: {
+        severity: "warning",
+      },
+      MissingNullHandler: {
+        severity: "warning",
+      },
     },
   };
 
