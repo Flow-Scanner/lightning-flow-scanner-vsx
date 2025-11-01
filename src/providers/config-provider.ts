@@ -27,32 +27,7 @@ export class ConfigProvider {
       (await this.attemptToReadConfig(configPath, findInJson, JSON.parse)) ??
       (await this.attemptToReadConfig(configPath, findInYml, parse));
 
-    if (!configFile) {
-      configFile = await this.writeConfigFile(configPath);
-    }
-
     return configFile;
-  }
-
-  private async writeConfigFile(configPath: string): Promise<Configuration> {
-    const allRules = [...getRules()];
-    const rules: Record<string, { severity: string; expression?: string }> = {};
-
-    for (const rule of allRules) {
-      rules[rule.name] = { severity: 'error' };
-    }
-
-    const config = { rules };
-    const fspath = `${configPath}/.flow-scanner.yml`;
-    await this.persistConfig(fspath, config);
-    return { fspath, config };
-  }
-
-  private async persistConfig(fspath: string, config: any) {
-    await vscode.workspace.fs.writeFile(
-      vscode.Uri.file(fspath),
-      new TextEncoder().encode(String(new Document(config)))
-    );
   }
 
   private async attemptToReadConfig(
