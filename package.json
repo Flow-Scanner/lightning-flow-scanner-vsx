@@ -96,7 +96,7 @@
     "____MAIN____": "Developer Scripts",
     "build": "rollup -c && npm run build:wdio",
     "build:vsx": "rollup -c && vsce package",
-    "watch": "concurrently \"rollup -c -w\" \"webpack --watch --config ./build/node-extension.webpack.config.js\"",
+    "watch": "rimraf out dist && concurrently \"rollup -c -w\" \"webpack --watch --config ./build/node-extension.webpack.config.js\"",
     "test": "npm run wdio"
   },
   "devDependencies": {
@@ -140,6 +140,7 @@
     "postcss-load-config": "^4.0.2",
     "prettier": "^3.5.3",
     "process": "^0.11.10",
+    "rimraf": "^6.1.0",
     "rollup": "^4.34.0",
     "rollup-plugin-css-only": "^4.5.2",
     "rollup-plugin-node-builtins": "^2.1.2",
