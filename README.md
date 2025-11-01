@@ -26,8 +26,6 @@ Use our side bar or the **Command Palette** and type `Flow Scanner` to see the l
 | Key                              | Description                                                                       | Default Value                 |
 | -------------------------------- | --------------------------------------------------------------------------------- | ----------------------------- |
 | `flowscanner.SpecifyFiles`     | Specify flow file paths instead of a root directory.                              | `false`                     |
-| `flowscanner.NamingConvention` | Specify a REGEX expression to use as Flow Naming convention.                      | `[A-Za-z0-9]+_[A-Za-z0-9]+` |
-| `flowscanner.APIVersion`       | Specify an expression to validate the API version, i.e. '===50'(use at least 50). | `>50`                       |
 
 ## Development
 

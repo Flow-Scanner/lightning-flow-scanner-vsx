@@ -16,7 +16,7 @@ type RuleWithExpression = { severity: string; expression?: string };
 type RuleConfig = Record<string, RuleWithExpression>;
 
 export default class Commands {
-  constructor(private context: vscode.ExtensionContext) {}
+  constructor(private context: vscode.ExtensionContext) { }
 
   get handlers() {
     const rawHandlers: Record<string, (...args: any[]) => any> = {
@@ -35,26 +35,65 @@ export default class Commands {
     vscode.env.openExternal(url);
   }
 
-  private async loadConfig(workspacePath: string): Promise<RuleConfig> {
-    const cp = new ConfigProvider();
-    let result: { fspath: string; config: any } | undefined;
-    try {
-      result = await cp.discover(workspacePath);
-    } catch {}
+private async loadConfig(workspacePath: string): Promise<RuleConfig> {
+  const cp = new ConfigProvider();
+  let result: { fspath: string; config: any } | undefined;
+  try {
+    result = await cp.discover(workspacePath);
+  } catch { }
 
-    const rules: RuleConfig = result ? (result.config as any)?.rules || {} : {};
-    await CacheProvider.instance.set('ruleconfig', rules);
-    return rules;
+  const rawRules = result?.config?.rules || {};
+  const rules: RuleConfig = {};
+
+  // Normalize all rules
+  for (const [ruleName, rule] of Object.entries(rawRules)) {
+    rules[ruleName] = {
+      severity: String((rule as any).severity || 'error'),
+      expression: (rule as any).expression !== undefined
+        ? String((rule as any).expression)
+        : undefined
+    };
   }
 
-  private async saveConfig(workspacePath: string, rules: RuleConfig) {
-    const configPath = path.join(workspacePath, '.flow-scanner.yml');
-    await vscode.workspace.fs.writeFile(
-      vscode.Uri.file(configPath),
-      new TextEncoder().encode(YAML.stringify({ rules }))
-    );
-    await CacheProvider.instance.set('ruleconfig', rules);
+  await CacheProvider.instance.set('ruleconfig', rules);
+  return rules;
+}
+
+private async saveConfig(workspacePath: string, rules: RuleConfig) {
+  const configPath = path.join(workspacePath, '.flow-scanner.yml');
+
+  const doc = new YAML.Document({ rules });
+  const rulesNode = doc.get('rules', true);
+
+  if (rulesNode && YAML.isMap(rulesNode)) {
+    for (const [ruleName, rule] of Object.entries(rules)) {
+      if (!rule.expression) continue;
+
+      const ruleNode = rulesNode.get(ruleName, true);
+      if (ruleNode && YAML.isMap(ruleNode)) {
+        const expr = rule.expression.trim();
+
+        // Remove quotes for regex rules to be interpreted properly
+        let scalar = new YAML.Scalar(expr.replace(/^"|"$/g, ''));
+
+        // Only quote if really necessary (rare)
+        if (/^[A-Za-z0-9]+$/.test(expr) && ruleName !== 'FlowName') {
+          (scalar as any).style = 'double';
+        }
+
+        ruleNode.set('expression', scalar);
+      }
+    }
   }
+
+  await vscode.workspace.fs.writeFile(
+    vscode.Uri.file(configPath),
+    new TextEncoder().encode(String(doc))
+  );
+
+  await CacheProvider.instance.set('ruleconfig', rules);
+}
+
 
   private async configRules() {
     const ws = vscode.workspace.workspaceFolders?.[0];
