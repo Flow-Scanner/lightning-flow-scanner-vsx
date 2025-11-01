@@ -12,8 +12,11 @@ import * as path from 'path';
 const toFsPaths = (uris: vscode.Uri[]): string[] => uris.map(u => u.fsPath);
 const toUris = (paths: string[]): vscode.Uri[] => paths.map(p => vscode.Uri.file(p));
 
-type RuleWithExpression = { severity: string; expression?: string };
-type RuleConfig = Record<string, RuleWithExpression>;
+interface RuleEntry {
+  severity: string;
+  expression?: string;
+}
+type RuleConfig = Record<string, RuleEntry>;
 
 export default class Commands {
   constructor(private context: vscode.ExtensionContext) {}
@@ -35,51 +38,61 @@ export default class Commands {
     vscode.env.openExternal(url);
   }
 
-  private async loadConfig(workspacePath: string): Promise<RuleConfig> {
+  private async loadConfigFromFile(workspacePath: string): Promise<RuleConfig> {
     const cp = new ConfigProvider();
     let result: { fspath: string; config: any } | undefined;
     try {
       result = await cp.discover(workspacePath);
     } catch {}
 
-    const rawRules = result?.config?.rules || {};
+    const rawRules = (result?.config?.rules as Record<string, unknown>) || {};
     const rules: RuleConfig = {};
 
-    for (const [ruleName, rule] of Object.entries(rawRules)) {
-      rules[ruleName] = {
-        severity: String((rule as any).severity || 'error'),
-        expression: (rule as any).expression !== undefined
-          ? String((rule as any).expression)
-          : undefined
-      };
+    for (const [name, rule] of Object.entries(rawRules)) {
+      if (typeof rule === 'object' && rule !== null) {
+        const r = rule as Record<string, unknown>;
+        rules[name] = {
+          severity: String(r.severity ?? 'error'),
+          expression: r.expression !== undefined ? String(r.expression) : undefined
+        };
+      }
     }
 
+    OutputChannel.getInstance().logChannel.debug('Loaded config:', rules);
     await CacheProvider.instance.set('ruleconfig', rules);
     return rules;
   }
 
   private async saveConfig(workspacePath: string, rules: RuleConfig) {
     const configPath = path.join(workspacePath, '.flow-scanner.yml');
-    const doc = new YAML.Document({ rules });
-    const rulesNode = doc.get('rules', true);
-    if (rulesNode && YAML.isMap(rulesNode)) {
-      for (const [ruleName, rule] of Object.entries(rules)) {
-        if (!rule.expression) continue;
-        const ruleNode = rulesNode.get(ruleName, true);
-        if (ruleNode && YAML.isMap(ruleNode)) {
-          const expr = rule.expression.trim();
-          let scalar = new YAML.Scalar(expr.replace(/^"|"$/g, ''));
-          if (/^[A-Za-z0-9]+$/.test(expr) && ruleName !== 'FlowName') {
-            (scalar as any).style = 'double';
-          }
-          ruleNode.set('expression', scalar);
-        }
+
+    const config: any = { rules: {} };
+    for (const [name, rule] of Object.entries(rules)) {
+      config.rules[name] = {
+        severity: rule.severity
+      };
+      if (rule.expression) {
+        config.rules[name].expression = rule.expression;
       }
     }
+
+    const yamlLines = ['rules:'];
+    for (const [name, rule] of Object.entries(config.rules)) {
+      yamlLines.push(`  ${name}:`);
+      yamlLines.push(`    severity: ${rule['severity']}`);
+      if (rule['expression']) {
+        yamlLines.push(`    expression: ${JSON.stringify(rule['expression'])}`);
+      }
+    }
+
+    const yamlString = yamlLines.join('\n');
+
     await vscode.workspace.fs.writeFile(
       vscode.Uri.file(configPath),
-      new TextEncoder().encode(String(doc))
+      new TextEncoder().encode(yamlString)
     );
+
+    OutputChannel.getInstance().logChannel.debug('Saved config:', rules);
     await CacheProvider.instance.set('ruleconfig', rules);
   }
 
@@ -91,18 +104,18 @@ export default class Commands {
     }
 
     const workspacePath = ws.uri.fsPath;
-    let rules: RuleConfig = await this.loadConfig(workspacePath);
+    let rules: RuleConfig = await this.loadConfigFromFile(workspacePath);
 
     const allRules = [...core.getRules()];
-    const currentRuleNames = Object.keys(rules);
+    const currentNames = Object.keys(rules);
 
-    const quickPickItems = allRules.map(rule => ({
+    const items = allRules.map(rule => ({
       label: rule.label,
       description: rule.name,
-      picked: currentRuleNames.includes(rule.name),
+      picked: currentNames.includes(rule.name),
     }));
 
-    const selected = await vscode.window.showQuickPick(quickPickItems, {
+    const selected = await vscode.window.showQuickPick(items, {
       canPickMany: true,
       placeHolder: 'Select rules to enable/disable',
     });
@@ -137,9 +150,9 @@ export default class Commands {
     if (newRules.APIVersion) {
       const current = newRules.APIVersion.expression || '';
       const expr = await vscode.window.showInputBox({
-        prompt: 'Set API version rule (e.g. ">50")',
-        placeHolder: '>50',
-        value: current || '>50',
+        prompt: 'Set API version rule (e.g. ">=50")',
+        placeHolder: '>=50',
+        value: current || '>=50',
       });
       if (expr !== undefined && expr.trim() !== current) {
         newRules.APIVersion.expression = expr.trim() || undefined;
@@ -147,7 +160,7 @@ export default class Commands {
       }
     }
 
-    if (changed || Object.keys(newRules).length !== currentRuleNames.length) {
+    if (changed || Object.keys(newRules).length !== currentNames.length) {
       await this.saveConfig(workspacePath, newRules);
     }
   }
@@ -162,7 +175,7 @@ export default class Commands {
     const configReset = vscode.workspace.getConfiguration('flowscanner').get<boolean>('Reset');
     if (configReset) await this.configRules();
 
-    const ruleConfig = await this.loadConfig(root.fsPath);
+    const ruleConfig = await this.loadConfigFromFile(root.fsPath);
 
     if (Object.keys(ruleConfig).length === 0) {
       const choice = await vscode.window.showWarningMessage(
@@ -175,6 +188,8 @@ export default class Commands {
         return;
       }
     }
+
+    OutputChannel.getInstance().logChannel.debug('Using rule config for scan:', ruleConfig);
 
     const parsed = await core.parse(toFsPaths(selectedUris));
     const results = core.scan(parsed, ruleConfig);
@@ -200,7 +215,7 @@ export default class Commands {
       if (!uris) return;
 
       const root = vscode.workspace.workspaceFolders![0].uri;
-      const ruleConfig = await this.loadConfig(root.fsPath);
+      const ruleConfig = await this.loadConfigFromFile(root.fsPath);
 
       if (Object.keys(ruleConfig).length === 0) {
         const choice = await vscode.window.showWarningMessage(

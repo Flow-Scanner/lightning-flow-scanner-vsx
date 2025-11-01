@@ -12,15 +12,13 @@ type Configuration = {
 };
 
 export class ConfigProvider {
-  public async discover(configPath: string): Promise<Configuration> {
-    const configurationName = 'flow-scanner';
-    const findInJson = [`.${configurationName}.json`, `${configurationName}.json`];
+  public async discover(configPath: string): Promise<Configuration | null> {
+    const findInJson = ['.flow-scanner.json', 'flow-scanner.json'];
     const findInYml = [
-      `.${configurationName}.yml`,
-      `.${configurationName}.yaml`,
-      `${configurationName}.yaml`,
-      `${configurationName}.yml`,
-      configurationName,
+      '.flow-scanner.yml',
+      '.flow-scanner.yaml',
+      'flow-scanner.yaml',
+      'flow-scanner.yml',
     ];
 
     let configFile =
@@ -48,7 +46,7 @@ export class ConfigProvider {
   }
 
   public async loadConfig(configPath?: string): Promise<IRulesConfig> {
-    const explorerResults = await this.discover(configPath || vscode.workspace.workspaceFolders![0].uri.fsPath);
-    return (explorerResults?.config as IRulesConfig) ?? { rules: {} };
+    const result = await this.discover(configPath || vscode.workspace.workspaceFolders![0].uri.fsPath);
+    return result ? (result.config as IRulesConfig) : { rules: {} };
   }
 }
