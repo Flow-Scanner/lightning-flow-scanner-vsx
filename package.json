@@ -55,7 +55,7 @@
       },
       {
         "command": "flowscanner.configRules",
-        "title": "Configure Flow Rules"
+        "title": "Configure Flow Scanner"
       }
     ],
     "viewsContainers": {
