@@ -19,7 +19,7 @@ interface RuleEntry {
 type RuleConfig = Record<string, RuleEntry>;
 
 export default class Commands {
-  constructor(private context: vscode.ExtensionContext) {}
+  constructor(private context: vscode.ExtensionContext) { }
 
   get handlers() {
     const rawHandlers: Record<string, (...args: any[]) => any> = {
@@ -40,6 +40,8 @@ export default class Commands {
 
   private async loadConfig(workspacePath: string): Promise<RuleConfig> {
     const rawConfig = await loadScannerConfig(workspacePath);
+    // OutputChannel.getInstance().logChannel.debug('Raw config loaded:', JSON.stringify(rawConfig, null, 2));
+
     const rawRules = (rawConfig.rules as Record<string, unknown>) || {};
     const rules: RuleConfig = {};
 
@@ -53,7 +55,6 @@ export default class Commands {
       }
     }
 
-    OutputChannel.getInstance().logChannel.debug('Loaded config:', rules);
     await CacheProvider.instance.set('ruleconfig', rules);
     return rules;
   }
@@ -61,160 +62,125 @@ export default class Commands {
   private async saveConfig(workspacePath: string, rules: RuleConfig) {
     const configPath = path.join(workspacePath, '.flow-scanner.yml');
     const config = { rules };
-
     const yamlLines = ['rules:'];
     for (const [name, rule] of Object.entries(config.rules)) {
-      yamlLines.push(`  ${name}:`);
-      yamlLines.push(`    severity: ${rule.severity}`);
+      yamlLines.push(`  ${name}:`);  // 2 spaces
+      yamlLines.push(`    severity: ${rule.severity}`);  // 4 spaces
       if (rule.expression) {
-        yamlLines.push(`    expression: ${JSON.stringify(rule.expression)}`);
+        yamlLines.push(`    expression: ${JSON.stringify(rule.expression)}`);  // 4 spaces
       }
     }
-
     const yamlString = yamlLines.join('\n');
     await vscode.workspace.fs.writeFile(vscode.Uri.file(configPath), new TextEncoder().encode(yamlString));
     await CacheProvider.instance.set('ruleconfig', rules);
   }
 
-  private async configRules() {
-    const ws = vscode.workspace.workspaceFolders?.[0];
-    if (!ws) {
-      vscode.window.showErrorMessage('No workspace folder found.');
-      return;
-    }
+private async configRules() {
+  const ws = vscode.workspace.workspaceFolders?.[0];
+  if (!ws) {
+    vscode.window.showErrorMessage('No workspace folder found.');
+    return;
+  }
 
-    const workspacePath = ws.uri.fsPath;
-    let rules: RuleConfig = await this.loadConfig(workspacePath);
+  const workspacePath = ws.uri.fsPath;
+  let rules: RuleConfig = await this.loadConfig(workspacePath);
 
-    const allRules = [...core.getRules()];
-    const currentNames = Object.keys(rules);
+  const allRules = [...core.getRules()];
+  const currentNames = Object.keys(rules);
+  
+  // Preselect all rules if no config exists
+  const isEmptyConfig = currentNames.length === 0;
 
-    const items = allRules.map(rule => ({
-      label: rule.label,
-      description: rule.name,
-      picked: currentNames.includes(rule.name),
-    }));
+  const items = allRules.map(rule => ({
+    label: rule.label,
+    description: rule.name,
+    picked: isEmptyConfig ? true : currentNames.includes(rule.name),
+  }));
 
-    const selected = await vscode.window.showQuickPick(items, {
-      canPickMany: true,
-      placeHolder: 'Select rules to enable/disable',
+  const selected = await vscode.window.showQuickPick(items, {
+    canPickMany: true,
+    placeHolder: 'Select rules to enable/disable',
+  });
+
+  if (selected === undefined) return;
+
+  const newRules: RuleConfig = {};
+  for (const item of selected) {
+    const def = allRules.find(r => r.name === item.description)!;
+    const existing = rules[def.name];
+    newRules[def.name] = {
+      severity: existing?.severity || 'error',
+      expression: existing?.expression,
+    };
+  }
+
+  let changed = false;
+
+  if (newRules.FlowName) {
+    const current = newRules.FlowName.expression || '';
+    const expr = await vscode.window.showInputBox({
+      prompt: 'Define naming convention (REGEX) for FlowName',
+      placeHolder: '[A-Za-z0-9]+_[A-Za-z0-9]+',
+      value: current || '[A-Za-z0-9]+_[A-Za-z0-9]+',
     });
-
-    if (selected === undefined) return;
-
-    const newRules: RuleConfig = {};
-    for (const item of selected) {
-      const def = allRules.find(r => r.name === item.description)!;
-      const existing = rules[def.name];
-      newRules[def.name] = {
-        severity: existing?.severity || 'error',
-        expression: existing?.expression,
-      };
-    }
-
-    let changed = false;
-
-    if (newRules.FlowName) {
-      const current = newRules.FlowName.expression || '';
-      const expr = await vscode.window.showInputBox({
-        prompt: 'Define naming convention (REGEX) for FlowName',
-        placeHolder: '[A-Za-z0-9]+_[A-Za-z0-9]+',
-        value: current || '[A-Za-z0-9]+_[A-Za-z0-9]+',
-      });
-      if (expr !== undefined && expr.trim() !== current) {
-        newRules.FlowName.expression = expr.trim() || undefined;
-        changed = true;
-      }
-    }
-
-    if (newRules.APIVersion) {
-      const current = newRules.APIVersion.expression || '';
-      const expr = await vscode.window.showInputBox({
-        prompt: 'Set API version rule (e.g. ">=50")',
-        placeHolder: '>=50',
-        value: current || '>=50',
-      });
-      if (expr !== undefined && expr.trim() !== current) {
-        newRules.APIVersion.expression = expr.trim() || undefined;
-        changed = true;
-      }
-    }
-
-    if (changed || Object.keys(newRules).length !== currentNames.length) {
-      await this.saveConfig(workspacePath, newRules);
+    if (expr !== undefined && expr.trim() !== current) {
+      newRules.FlowName.expression = expr.trim() || undefined;
+      changed = true;
     }
   }
 
-private async scanFlows() {
-  const selectedUris = await this.selectFlows('Select flow files or folder to scan:');
-  if (!selectedUris) return;
+  if (newRules.APIVersion) {
+    const current = newRules.APIVersion.expression || '';
+    const expr = await vscode.window.showInputBox({
+      prompt: 'Set API version rule (e.g. ">=50")',
+      placeHolder: '>=50',
+      value: current || '>=50',
+    });
+    if (expr !== undefined && expr.trim() !== current) {
+      newRules.APIVersion.expression = expr.trim() || undefined;
+      changed = true;
+    }
+  }
 
-  const root = vscode.workspace.workspaceFolders![0].uri;
-  ScanOverview.createOrShow(this.context.extensionUri, []);
-
-  const configReset = vscode.workspace.getConfiguration('flowscanner').get<boolean>('Reset');
-  if (configReset) await this.configRules();
-
-  // --- FORCE OVERRIDE: MUST INCLUDE APIVersion TO KILL DEFAULT <49 ---
-  const ruleConfig = {
-    rules: {
-      APIVersion: {
-        severity: "error",
-        expression: ">55",  // THIS NOW WINS
-      },
-      CopyAPIName: {
-        severity: "error",
-      },
-      MissingFaultPath: {
-        severity: "warning",
-      },
-      MissingNullHandler: {
-        severity: "warning",
-      },
-    },
-  };
-
-  OutputChannel.getInstance().logChannel.debug('FORCED CONFIG (overrides core default):', ruleConfig);
-
-  const parsed = await core.parse(toFsPaths(selectedUris));
-  const results = core.scan(parsed, ruleConfig);
-
-  await CacheProvider.instance.set('results', results);
-  ScanOverview.createOrShow(this.context.extensionUri, results);
+  if (changed || Object.keys(newRules).length !== currentNames.length) {
+    await this.saveConfig(workspacePath, newRules);
+  }
 }
 
-  // private async scanFlows() {
-  //   const selectedUris = await this.selectFlows('Select flow files or folder to scan:');
-  //   if (!selectedUris) return;
+  private async scanFlows() {
+    const selectedUris = await this.selectFlows('Select flow files or folder to scan:');
+    if (!selectedUris) return;
 
-  //   const root = vscode.workspace.workspaceFolders![0].uri;
-  //   ScanOverview.createOrShow(this.context.extensionUri, []);
+    const root = vscode.workspace.workspaceFolders![0].uri;
+    ScanOverview.createOrShow(this.context.extensionUri, []);
 
-  //   const configReset = vscode.workspace.getConfiguration('flowscanner').get<boolean>('Reset');
-  //   if (configReset) await this.configRules();
+    const configReset = vscode.workspace.getConfiguration('flowscanner').get<boolean>('Reset');
+    if (configReset) await this.configRules();
 
-  //   const ruleConfig = await this.loadConfig(root.fsPath);
+    // Load config dynamically from YAML file
+    const ruleConfig = await this.loadConfig(root.fsPath);
 
-  //   if (Object.keys(ruleConfig).length === 0) {
-  //     const choice = await vscode.window.showWarningMessage(
-  //       'No rules configured. Run "Configure Rules" first?',
-  //       'Configure Now',
-  //       'Scan Anyway'
-  //     );
-  //     if (choice === 'Configure Now') {
-  //       await this.configRules();
-  //       return;
-  //     }
-  //   }
+    if (Object.keys(ruleConfig).length === 0) {
+      const choice = await vscode.window.showWarningMessage(
+        'No rules configured. Run "Configure Rules" first?',
+        'Configure Now',
+        'Scan Anyway'
+      );
+      if (choice === 'Configure Now') {
+        await this.configRules();
+        return;
+      }
+    }
 
-  //   OutputChannel.getInstance().logChannel.debug('Using rule config for scan:', ruleConfig);
+    OutputChannel.getInstance().logChannel.debug('Using rule config for scan:', ruleConfig);
+    const scanConfig = { rules: ruleConfig };
 
-  //   const parsed = await core.parse(toFsPaths(selectedUris));
-  //   const results = core.scan(parsed, ruleConfig);
+    const parsed = await core.parse(toFsPaths(selectedUris));
+    const results = core.scan(parsed, scanConfig);
 
-  //   await CacheProvider.instance.set('results', results);
-  //   ScanOverview.createOrShow(this.context.extensionUri, results);
-  // }
+    await CacheProvider.instance.set('results', results);
+    ScanOverview.createOrShow(this.context.extensionUri, results);
+  }
 
   private async fixFlows() {
     let results: core.ScanResult[] = CacheProvider.instance.get('results') || [];
