@@ -11,7 +11,7 @@
 
 ## Usage
 
-Use our side bar or the **Command Palette** and type `Flow Scanner` to see the list of all available commands.
+Use our side bar or the **Command Palette** and type `flowscanner` to see the list of all available commands.
 
 * `Configure Flow Scanner` Allows to define rules and expressions as per defined in the [scanner documentation](https://github.com/Flow-Scanner/lightning-flow-scanner-core).
 * `Scan Flows` allows choosing either a directory or a selection of flows to run the analysis against.
@@ -23,9 +23,9 @@ Use our side bar or the **Command Palette** and type `Flow Scanner` to see the l
 
 ## Configuration
 
-| Key                              | Description                                                                       | Default Value                 |
-| -------------------------------- | --------------------------------------------------------------------------------- | ----------------------------- |
-| `flowscanner.SpecifyFiles`     | Specify flow file paths instead of a root directory.                              | `false`                     |
+| Key                          | Description                                          | Default Value |
+| ---------------------------- | ---------------------------------------------------- | ------------- |
+| `flowscanner.SpecifyFiles` | Specify flow file paths instead of a root directory. | `false`     |
 
 ## Development
 

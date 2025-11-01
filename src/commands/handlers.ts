@@ -5,8 +5,7 @@ import { ScanOverview } from '../panels/ScanOverviewPanel';
 import * as core from 'lightning-flow-scanner-core';
 import { CacheProvider } from '../providers/cache-provider';
 import { OutputChannel } from '../providers/outputChannel';
-import { ConfigProvider } from '../providers/config-provider';
-import * as YAML from 'yaml';
+import { loadScannerConfig } from '../providers/config-provider';
 import * as path from 'path';
 
 const toFsPaths = (uris: vscode.Uri[]): string[] => uris.map(u => u.fsPath);
@@ -38,14 +37,9 @@ export default class Commands {
     vscode.env.openExternal(url);
   }
 
-  private async loadConfigFromFile(workspacePath: string): Promise<RuleConfig> {
-    const cp = new ConfigProvider();
-    let result: { fspath: string; config: any } | undefined;
-    try {
-      result = await cp.discover(workspacePath);
-    } catch {}
-
-    const rawRules = (result?.config?.rules as Record<string, unknown>) || {};
+  private async loadConfig(workspacePath: string): Promise<RuleConfig> {
+    const rawConfig = await loadScannerConfig(workspacePath);
+    const rawRules = (rawConfig.rules as Record<string, unknown>) || {};
     const rules: RuleConfig = {};
 
     for (const [name, rule] of Object.entries(rawRules)) {
@@ -65,34 +59,19 @@ export default class Commands {
 
   private async saveConfig(workspacePath: string, rules: RuleConfig) {
     const configPath = path.join(workspacePath, '.flow-scanner.yml');
-
-    const config: any = { rules: {} };
-    for (const [name, rule] of Object.entries(rules)) {
-      config.rules[name] = {
-        severity: rule.severity
-      };
-      if (rule.expression) {
-        config.rules[name].expression = rule.expression;
-      }
-    }
+    const config = { rules };
 
     const yamlLines = ['rules:'];
     for (const [name, rule] of Object.entries(config.rules)) {
       yamlLines.push(`  ${name}:`);
-      yamlLines.push(`    severity: ${rule['severity']}`);
-      if (rule['expression']) {
-        yamlLines.push(`    expression: ${JSON.stringify(rule['expression'])}`);
+      yamlLines.push(`    severity: ${rule.severity}`);
+      if (rule.expression) {
+        yamlLines.push(`    expression: ${JSON.stringify(rule.expression)}`);
       }
     }
 
     const yamlString = yamlLines.join('\n');
-
-    await vscode.workspace.fs.writeFile(
-      vscode.Uri.file(configPath),
-      new TextEncoder().encode(yamlString)
-    );
-
-    OutputChannel.getInstance().logChannel.debug('Saved config:', rules);
+    await vscode.workspace.fs.writeFile(vscode.Uri.file(configPath), new TextEncoder().encode(yamlString));
     await CacheProvider.instance.set('ruleconfig', rules);
   }
 
@@ -104,7 +83,7 @@ export default class Commands {
     }
 
     const workspacePath = ws.uri.fsPath;
-    let rules: RuleConfig = await this.loadConfigFromFile(workspacePath);
+    let rules: RuleConfig = await this.loadConfig(workspacePath);
 
     const allRules = [...core.getRules()];
     const currentNames = Object.keys(rules);
@@ -175,7 +154,7 @@ export default class Commands {
     const configReset = vscode.workspace.getConfiguration('flowscanner').get<boolean>('Reset');
     if (configReset) await this.configRules();
 
-    const ruleConfig = await this.loadConfigFromFile(root.fsPath);
+    const ruleConfig = await this.loadConfig(root.fsPath);
 
     if (Object.keys(ruleConfig).length === 0) {
       const choice = await vscode.window.showWarningMessage(
@@ -215,7 +194,7 @@ export default class Commands {
       if (!uris) return;
 
       const root = vscode.workspace.workspaceFolders![0].uri;
-      const ruleConfig = await this.loadConfigFromFile(root.fsPath);
+      const ruleConfig = await this.loadConfig(root.fsPath);
 
       if (Object.keys(ruleConfig).length === 0) {
         const choice = await vscode.window.showWarningMessage(
