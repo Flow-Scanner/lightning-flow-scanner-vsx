@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as uuid from "uuid";
 import { convertArrayToCSV } from "convert-array-to-csv";
 import { ViolationOverview } from "./ViolationOverviewPanel";
-import { ScanResult } from "lightning-flow-scanner-core";
+import { ScanResult } from "@flow-scanner/lightning-flow-scanner-core";
 
 export class ScanOverview {
   public static currentPanel: ScanOverview | undefined;
