@@ -73,6 +73,10 @@ export class RuleOverview {
           });
           return;
         }
+        case "globalSearch": {
+          webview.postMessage({ type: "applyGlobalSearch", value: data.value });
+          break;
+        }
       }
     });
   }
